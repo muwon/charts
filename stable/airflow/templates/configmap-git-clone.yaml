@@ -42,13 +42,18 @@ data:
     echo -e "HOST $REPO_HOST\n  IdentityFile ~/.ssh/$PRIVATE_KEY" > ~/.ssh/config
     {{- end }}
     {{- if eq .Values.dags.initContainer.enabled  false }}
+    if [ -d "$DIR" ]; then
+        rm -rf $( find $DIR -mindepth 1 )
+    fi
     git clone $REPO -b $REF $DIR
+    chown -R 1000:1000 $DIR
     {{- end }}
     cd $DIR
     while true; do
       git fetch origin $REF;
       git reset --hard origin/$REF;
       git clean -fd;
+      chown -R 1000:1000 $DIR
       date;
       sleep $SYNC_TIME;
     done

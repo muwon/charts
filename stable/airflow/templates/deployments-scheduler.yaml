@@ -122,7 +122,7 @@ spec:
           args:
             - "{{ .Values.dags.git.url }}"
             - "{{ .Values.dags.git.ref }}"
-            - "{{ .Values.dags.initContainer.mountPath }}"
+            - "{{ .Values.dags.initContainer.mountPath }}{{ .Values.dags.initContainer.syncSubPath | default "" }}"
             - "{{ .Values.dags.git.repoHost}}"
             - "{{ .Values.dags.git.privateKeyName }}"
             - "{{ .Values.dags.git.gitSync.refreshTime }}"
@@ -178,7 +178,7 @@ spec:
               subPath: {{ .subPath }}
               {{ end }}
           {{- end }}
-{{- if .Values.airflow.extraVolumeMounts }}
+{{- if .Values.airflow.extraVolumeMountsDisabled }}
 {{ toYaml .Values.airflow.extraVolumeMounts | indent 12 }}
 {{- end }}
           args:
@@ -255,7 +255,7 @@ spec:
           persistentVolumeClaim:
             claimName: {{ .Values.logsPersistence.existingClaim | default (printf "%s-logs" (include "airflow.fullname" . | trunc 58 )) }}
         {{- end }}
-        {{- if .Values.dags.initContainer.enabled }}
+        {{- if or .Values.dags.git.gitSync.enabled .Values.dags.initContainer.enabled }}
         - name: git-clone
           configMap:
             name: {{ template "airflow.fullname" . }}-git-clone
@@ -284,6 +284,6 @@ spec:
           configMap:
             name: {{ .configMap }}
         {{- end }}
-{{- if .Values.airflow.extraVolumes }}
+{{- if .Values.airflow.extraVolumesDisabled }}
 {{ toYaml .Values.airflow.extraVolumes | indent 8 }}
 {{- end }}
