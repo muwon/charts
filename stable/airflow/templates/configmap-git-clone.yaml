@@ -50,9 +50,7 @@ data:
     {{- end }}
     cd $DIR
     while true; do
-      git fetch origin $REF;
-      git reset --hard origin/$REF;
-      git clean -fd;
+      git pull
       chown -R 1000:1000 $DIR
       date;
       sleep $SYNC_TIME;
