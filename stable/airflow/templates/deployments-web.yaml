@@ -172,7 +172,7 @@ spec:
               subPath: {{ .subPath }}
               {{ end }}
           {{- end }}
-{{- if .Values.airflow.extraVolumeMountsDisabled }}
+{{- if .Values.airflow.extraVolumeMounts }}
 {{ toYaml .Values.airflow.extraVolumeMounts | indent 12 }}
 {{- end }}
           args:
@@ -263,6 +263,6 @@ spec:
           configMap:
             name: {{ .configMap }}
         {{- end }}
-{{- if .Values.airflow.extraVolumesDisabled }}
+{{- if .Values.airflow.extraVolumes }}
 {{ toYaml .Values.airflow.extraVolumes | indent 8 }}
 {{- end }}
