@@ -73,8 +73,9 @@ spec:
       securityContext:
 {{ toYaml .Values.workers.securityContext | indent 8 }}
       {{- end }}
-      {{- if .Values.dags.initContainer.enabled }}
+      {{- if or .Values.dags.initContainer.enabled .Values.workers.logsPersistence.enabled }}
       initContainers:
+        {{- if .Values.dags.initContainer.enabled }}
         - name: git-clone
           image: {{ .Values.dags.initContainer.image.repository }}:{{ .Values.dags.initContainer.image.tag }} # Any image with git will do
           imagePullPolicy: {{ .Values.dags.initContainer.image.pullPolicy }}
@@ -100,6 +101,10 @@ spec:
           - name: git-clone-secret
             mountPath: /keys
           {{- end }}
+        {{- end }}
+        {{- if and .Values.workers.logsPersistence.enabled .Values.workers.extraInitContainers }}
+{{ toYaml .Values.workers.extraInitContainers | indent 8 }}
+        {{- end }}
       {{- end }}
       containers:
         {{- if .Values.dags.git.gitSync.doNotEnable }}
@@ -161,10 +166,14 @@ spec:
             - name: dags-data
               mountPath: {{ .Values.dags.path }}
           {{- end }}
-          {{- if .Values.logsPersistence.enabled }}
+          {{- if and .Values.workers.logsPersistence.enabled .Values.workers.logsPersistence.existingClaim }}
             - name: logs-data
               mountPath: {{ .Values.logs.path }}
-              subPath: {{ .Values.logsPersistence.subPath | default "" }}
+              subPath: {{ .Values.workers.logsPersistence.subPath | default "" }}
+          {{- else if and .Values.workers.logsPersistence.enabled (not .Values.workers.logsPersistence.existingClaim) }}
+            - name: {{ template "airflow.fullname" . }}-worker-logs
+              mountPath: {{ .Values.logs.path }}
+              subPath: {{ .Values.workers.logsPersistence.subPath | default "" }}
           {{- end }}
           {{- range .Values.airflow.extraConfigmapMounts }}
             - name: {{ .name }}
@@ -228,10 +237,10 @@ spec:
         {{- else }}
           emptyDir: {}
         {{- end }}
-        {{- if .Values.logsPersistence.enabled }}
+        {{- if and .Values.workers.logsPersistence.enabled .Values.workers.logsPersistence.existingClaim }}
         - name: logs-data
           persistentVolumeClaim:
-            claimName: {{ .Values.logsPersistence.existingClaim | default (printf "%s-logs" (include "airflow.fullname" . | trunc 58 )) }}
+            claimName: {{ .Values.workers.logsPersistence.existingClaim }}
         {{- end }}
         {{- if or .Values.dags.git.gitSync.enabled .Values.dags.initContainer.enabled }}
         - name: git-clone
@@ -256,4 +265,15 @@ spec:
 {{- if .Values.workers.extraVolumes }}
 {{ toYaml .Values.workers.extraVolumes | indent 8 }}
 {{- end }}
+  {{- if and .Values.workers.logsPersistence.enabled (not .Values.workers.logsPersistence.existingClaim) }}
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ template "airflow.fullname" . }}-worker-logs
+    spec:
+      accessModes: [ {{ .Values.workers.logsPersistence.accessMode | quote }} ]
+      storageClassName: {{ .Values.workers.logsPersistence.storageClass }}
+      resources:
+        requests:
+          storage: {{ .Values.workers.logsPersistence.size }}
+  {{- end }}
 {{- end }}
