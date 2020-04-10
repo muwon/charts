@@ -17,6 +17,8 @@ spec:
       labels:
         app: {{ template "tensorflow-notebook.name" . }}
         release: {{ .Release.Name }}
+      annotations:
+        checksum/jupyter-secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
     spec:
       containers:
         - name: jupyter
@@ -29,13 +31,18 @@ spec:
             - jupyter
           args:
             - notebook
-            - --allow-root      
+            - --allow-root
+            - --ip=0.0.0.0
           env:
             - name: PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ template "tensorflow-notebook.fullname" . }}
                   key: password
+          {{- if .Values.jupyter.resources }}
+          resources:
+            {{- toYaml .Values.jupyter.resources | nindent 12 }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /
@@ -45,7 +52,7 @@ spec:
               path: /
               port: 8888
           volumeMounts:
-            - mountPath: /output/training_logs
+            - mountPath: {{ .Values.logs.mountPath }}-{{ .Release.Name }}
               name: training-logs-volume
         - name: tensorboard
           image: "{{ .Values.tensorboard.image.repository }}:{{ .Values.tensorboard.image.tag }}"
@@ -57,7 +64,7 @@ spec:
             - tensorboard
           args:
             - --logdir
-            - /output/training_logs
+            - {{ .Values.logs.mountPath }}-{{ .Release.Name }}
             - --host
             - 0.0.0.0
           livenessProbe:
@@ -69,8 +76,9 @@ spec:
               path: /
               port: 6006
           volumeMounts:
-            - mountPath: /output/training_logs
+            - mountPath: {{ .Values.logs.mountPath }}-{{ .Release.Name }}
               name: training-logs-volume
       volumes:
         - name: training-logs-volume
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: {{ .Values.logs.existingClaim }}
