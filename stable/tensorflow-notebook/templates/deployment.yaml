@@ -32,13 +32,18 @@ spec:
           args:
             - notebook
             - --allow-root
-            - --ip=0.0.0.0
+{{- if .Values.extraArgs }}
+{{ toYaml .Values.extraArgs | indent 12 }}
+{{- end }}
           env:
             - name: PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ template "tensorflow-notebook.fullname" . }}
                   key: password
+{{- if .Values.extraEnv }}
+{{ toYaml .Values.extraEnv | indent 12 }}
+{{- end }}
           {{- if .Values.jupyter.resources }}
           resources:
             {{- toYaml .Values.jupyter.resources | nindent 12 }}
