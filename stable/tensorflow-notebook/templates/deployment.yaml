@@ -57,7 +57,7 @@ spec:
               path: /
               port: 8888
           volumeMounts:
-            - mountPath: {{ .Values.logs.mountPath }}-{{ .Release.Name }}
+            - mountPath: {{ .Values.logs.mountPath }}
               name: training-logs-volume
 {{- if .Values.extraVolumeMounts }}
 {{ toYaml .Values.extraVolumeMounts | indent 12 }}
@@ -72,7 +72,7 @@ spec:
             - tensorboard
           args:
             - --logdir
-            - {{ .Values.logs.mountPath }}-{{ .Release.Name }}
+            - {{ .Values.tensorboard.logDir }}
             - --host
             - 0.0.0.0
           livenessProbe:
@@ -84,7 +84,7 @@ spec:
               path: /
               port: 6006
           volumeMounts:
-            - mountPath: {{ .Values.logs.mountPath }}-{{ .Release.Name }}
+            - mountPath: {{ .Values.logs.mountPath }}
               name: training-logs-volume
       volumes:
         - name: training-logs-volume
