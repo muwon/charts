@@ -1,0 +1,24 @@
+{{- if and .Values.jupyter.configPersistence.enabled }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ template "tensorflow-notebook.fullname" . }}
+  labels:
+    app: {{ template "tensorflow-notebook.name" . }}
+    chart: {{ template "tensorflow-notebook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  accessModes:
+    - {{ .Values.jupyter.configPersistence.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.jupyter.configPersistence.size | quote }}
+{{- if .Values.jupyter.configPersistence.storageClass }}
+{{- if (eq "-" .Values.jupyter.configPersistence.storageClass) }}
+  storageClassName: ""
+{{- else }}
+  storageClassName: "{{ .Values.jupyter.configPersistence.storageClass }}"
+{{- end }}
+{{- end }}
+{{- end }}
