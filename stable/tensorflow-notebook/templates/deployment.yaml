@@ -31,12 +31,17 @@ spec:
           ports:
             - containerPort: 8888
               name: jupyter
+          {{- if not .Values.jupyter.defaultCmd }}
           command:
             - jupyter
           args:
             - notebook
             - --allow-root
+          {{- end }}
 {{- if .Values.extraArgs }}
+          {{- if .Values.jupyter.defaultCmd }}
+          args:
+          {{- end }}
 {{ toYaml .Values.extraArgs | indent 12 }}
 {{- end }}
           env:
