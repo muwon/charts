@@ -93,6 +93,31 @@ spec:
 {{ toYaml .Values.master.args | indent 10 }}         
         resources:
 {{ toYaml .Values.resources | indent 10 }}
+      - name: tensorboard
+        image: "{{ .Values.tensorboard.image.repository }}:{{ .Values.tensorboard.image.tag }}"
+        imagePullPolicy: {{ .Values.tensorboard.image.pullPolicy }}
+        ports:
+          - containerPort: {{ .Values.tensorboard.port }}
+            name: tensorboard
+        command:
+          - tensorboard
+        args:
+          - --logdir
+          - {{ .Values.tensorboard.logDir }}
+          - --host
+          - 0.0.0.0
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 6006
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 6006
+        volumeMounts:
+{{- if .Values.volumeMounts }}
+{{ toYaml .Values.volumeMounts | indent 8 }}
+{{- end }}
 {{- if .Values.ssh.useSecrets }}
       initContainers:
       - name: wait-workers
