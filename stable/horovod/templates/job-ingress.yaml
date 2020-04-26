@@ -1,0 +1,23 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ template "horovod.fullname" . }}-master-ingress
+  labels:
+    app: {{ template "horovod.name" . }}
+    chart: {{ template "horovod.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+  annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($http_x_forwarded_proto = "http") { return 308 https://$best_http_host$request_uri; }
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  rules:
+  - host: {{ .Values.tensorboard.uiHost }}
+    http:
+      paths:
+        - backend:
+            serviceName: {{ template "horovod.fullname" . }}-master
+            servicePort: {{ .Values.tensorboard.port }}
+          path: /
