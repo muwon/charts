@@ -51,7 +51,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
           args:
-            - --config.file=/etc/config/alertmanager.yml
+            - --config.file=/etc/alertmanager/alertmanager.yml
             - --storage.path={{ .Values.alertmanager.persistentVolume.mountPath }}
             - --cluster.advertise-address=$(POD_IP):6783
           {{- if .Values.alertmanager.statefulSet.headless.enableMeshPeer }}
@@ -94,13 +94,13 @@ spec:
           image: "{{ .Values.configmapReload.alertmanager.image.repository }}:{{ .Values.configmapReload.alertmanager.image.tag }}"
           imagePullPolicy: "{{ .Values.configmapReload.alertmanager.image.pullPolicy }}"
           args:
-            - --volume-dir=/etc/config
+            - --volume-dir=/etc/alertmanager
             - --webhook-url=http://localhost:9093{{ .Values.alertmanager.prefixURL }}/-/reload
           resources:
 {{ toYaml .Values.configmapReload.alertmanager.resources | indent 12 }}
           volumeMounts:
             - name: config-volume
-              mountPath: /etc/config
+              mountPath: /etc/alertmanager
               readOnly: true
         {{- end }}
     {{- if .Values.imagePullSecrets }}
