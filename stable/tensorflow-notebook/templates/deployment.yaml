@@ -1,3 +1,4 @@
+{{- $gpu_count := index .Values.jupyter.resources.limits "nvidia.com/gpu" -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,6 +21,20 @@ spec:
       annotations:
         checksum/jupyter-secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              {{- if gt $gpu_count 0.0 }}
+              - key: aliyun.accelerator/nvidia_count
+                operator: In
+                values: [{{ $gpu_count | quote }}]
+              {{- else }}
+              - key: gpu_node
+                operator: In
+                values: ["false"]
+              {{- end }}
 {{- if .Values.extraInitContainers }}
       initContainers:
 {{ toYaml .Values.extraInitContainers | indent 8 }}
