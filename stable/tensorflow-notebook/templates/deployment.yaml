@@ -9,6 +9,9 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
+{{- if .Values.extraDeploymentSpec }}
+{{ toYaml .Values.extraDeploymentSpec | indent 2 }}
+{{- end }}
   selector:
     matchLabels:
       app: {{ template "tensorflow-notebook.name" . }}
@@ -21,6 +24,9 @@ spec:
       annotations:
         checksum/jupyter-secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
     spec:
+{{- if .Values.extraPodSpec }}
+{{ toYaml .Values.extraPodSpec | indent 6 }}
+{{- end }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
