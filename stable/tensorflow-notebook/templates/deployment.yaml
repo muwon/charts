@@ -21,6 +21,9 @@ spec:
       annotations:
         checksum/jupyter-secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
     spec:
+{{- if .Values.extraPodSpec }}
+{{ toYaml .Values.extraPodSpec | indent 6 }}
+{{- end }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
