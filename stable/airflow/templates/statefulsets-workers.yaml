@@ -50,6 +50,9 @@ spec:
         component: worker
         release: {{ .Release.Name }}
     spec:
+{{- if .Values.workers.extraPodSpec }}
+{{ toYaml .Values.workers.extraPodSpec | indent 6 }}
+{{- end }}
       {{- if .Values.airflow.image.pullSecret }}
       imagePullSecrets:
         - name: {{ .Values.airflow.image.pullSecret }}
