@@ -9,9 +9,6 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
-{{- if .Values.extraDeploymentSpec }}
-{{ toYaml .Values.extraDeploymentSpec | indent 2 }}
-{{- end }}
   selector:
     matchLabels:
       app: {{ template "tensorflow-notebook.name" . }}
