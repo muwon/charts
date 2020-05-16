@@ -1,0 +1,182 @@
+{{- $gpu_count := index .Values.resources.limits "nvidia.com/gpu" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-master
+  labels:
+    app: {{ template "horovod.name" . }}
+    chart: {{ template "horovod.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    role: master
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+    checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+spec:
+  replicas: 1
+  {{- if and .Values.master.updateStrategy (eq .Values.master.updateStrategy "Recreate") }}
+  strategy:
+    type: Recreate
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ template "horovod.name" . }}
+      role: master
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "horovod.name" . }}
+        release: {{ .Release.Name }}
+        role: master
+    spec:
+      {{- if .Values.useHostNetwork }}
+      hostNetwork: {{ .Values.useHostNetwork }}
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+      {{- if .Values.useHostPID }}
+      hostPID: {{ .Values.useHostPID }}
+      {{- end }}
+      restartPolicy: Always
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: aliyun.accelerator/nvidia_count
+                operator: In
+                values: [{{ $gpu_count | quote }}]
+      volumes:
+      - name: {{ template "horovod.fullname" . }}-cm
+        configMap:
+          name: {{ template "horovod.fullname" . }}
+          items:
+          - key: hostfile.config
+            path: hostfile
+            mode: 438
+          - key: master.waitWorkerReady
+            path: waitWorkersReady.sh
+            mode: 365
+          - key: master.run
+            path: run.sh
+            mode: 365
+      {{- if .Values.ssh.useSecrets }}
+      - name: {{ template "horovod.fullname" . }}-secret
+        secret:
+          secretName: {{ template "horovod.fullname" . }}
+          defaultMode: 448
+          items:
+          - key: host-key
+            path: id_rsa
+          - key: host-key-pub
+            path: authorized_keys
+      {{- end }}
+{{- if .Values.volumes }}
+{{ toYaml .Values.volumes | indent  6 }}
+{{- end }}
+      containers:
+      - name: jupyter
+        image: "{{ .Values.jupyter.image.repository }}:{{ .Values.jupyter.image.tag }}"
+        imagePullPolicy: {{ .Values.jupyter.image.pullPolicy }}
+        ports:
+          - containerPort: {{ .Values.jupyter.port }}
+            name: jupyter
+          - containerPort: {{ .Values.ssh.port }}
+            name: master-ssh
+        command:
+          - /horovod/generated/run.sh
+        args:
+{{ toYaml .Values.jupyter.args | indent 10 }}
+        env:
+          - name: PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ template "horovod.fullname" . }}
+                key: password
+          - name: SSHPORT
+            value: "{{ .Values.ssh.port }}"
+          {{- if .Values.ssh.useSecrets }}
+          - name: USESECRETS
+            value: "{{ .Values.ssh.useSecrets }}"
+          {{- end }}
+          {{- if .Values.jupyter.env }}
+          {{ toYaml .Values.jupyter.env | nindent 10 }}
+          {{- end }}
+{{- if .Values.jupyter.privileged }}
+        securityContext:
+          privileged: true
+{{- end }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.jupyter.port }}
+        readinessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.jupyter.port }}
+        volumeMounts:
+        - name: {{ template "horovod.fullname" . }}-cm
+          mountPath: /horovod/generated
+        {{- if .Values.ssh.useSecrets }}
+        - name: {{ template "horovod.fullname" . }}-secret
+          readOnly: true
+          mountPath: "/etc/secret-volume"
+        {{- end }}
+{{- if .Values.volumeMounts }}
+{{ toYaml .Values.volumeMounts | indent 8 }}
+{{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      - name: tensorboard
+        image: "{{ .Values.tensorboard.image.repository }}:{{ .Values.tensorboard.image.tag }}"
+        imagePullPolicy: {{ .Values.tensorboard.image.pullPolicy }}
+        ports:
+          - containerPort: {{ .Values.tensorboard.port }}
+            name: tensorboard
+        command:
+          - tensorboard
+        args:
+          - --logdir
+          - {{ .Values.tensorboard.logDir }}
+          - --host
+          - 0.0.0.0
+        livenessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.tensorboard.port }}
+        readinessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.tensorboard.port }}
+        volumeMounts:
+{{- if .Values.volumeMounts }}
+{{ toYaml .Values.volumeMounts | indent 8 }}
+{{- end }}
+{{- if and .Values.master.jobEnabled .Values.ssh.useSecrets }}
+      initContainers:
+      - name: wait-workers
+        image: "{{ .Values.master.image.repository }}:{{ .Values.master.image.tag }}"
+        imagePullPolicy: {{ .Values.master.image.pullPolicy }}
+        env:
+        - name: SSHPORT
+          value: "{{ .Values.ssh.port }}"
+        {{- if .Values.ssh.useSecrets }}
+        - name: USESECRETS
+          value: "{{ .Values.ssh.useSecrets }}"
+        {{- end }}
+        {{- if .Values.master.env }}
+        {{ toYaml .Values.master.env | nindent 10 }}
+        {{- end }}
+        command: 
+        - /horovod/generated/waitWorkersReady.sh
+        args:
+        - /horovod/generated/hostfile
+        volumeMounts:
+        - name: {{ template "horovod.fullname" . }}-cm
+          mountPath: /horovod/generated
+        {{- if .Values.ssh.useSecrets }}
+        - name: {{ template "horovod.fullname" . }}-secret
+          readOnly: true
+          mountPath: "/etc/secret-volume"
+        {{- end }}
+{{- end }}

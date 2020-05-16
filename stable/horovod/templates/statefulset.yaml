@@ -1,3 +1,4 @@
+{{- $gpu_count := index .Values.resources.limits "nvidia.com/gpu" -}}
 apiVersion: apps/v1beta2
 kind: StatefulSet
 metadata:
@@ -9,6 +10,10 @@ metadata:
     heritage: {{ .Release.Service }}
     role: worker
 spec:
+  {{- if and .Values.worker.updateStrategy (eq .Values.worker.updateStrategy "Recreate") }}
+  strategy:
+    type: Recreate
+  {{- end }}
   selector:
     matchLabels:
       app: {{ template "horovod.name" . }}
@@ -30,6 +35,14 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
         checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: aliyun.accelerator/nvidia_count
+                    operator: In
+                    values: [{{ $gpu_count | quote }}]
       selector:
         matchLabels:
           app: {{ template "horovod.name" . }}
@@ -82,10 +95,7 @@ spec:
           value: "{{ .Values.ssh.useSecrets }}"
        {{- end }}
        {{- if .Values.master.env }}
-       {{- range $key, $value := .Values.master.env }}
-        - name: "{{ $key }}"
-          value: "{{ $value }}"
-       {{- end }}
+       {{ toYaml .Values.master.env | nindent 10 }}
        {{- end }}
 {{- if .Values.worker.privileged }}
         securityContext:

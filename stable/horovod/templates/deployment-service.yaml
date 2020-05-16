@@ -1,4 +1,3 @@
-{{- if .Values.master.jobEnabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -14,8 +13,13 @@ spec:
   - name: ssh 
     port: {{ .Values.ssh.port }}
     targetPort: {{ .Values.ssh.port }}
+  - name: tensorboard
+    port: {{ .Values.tensorboard.port }}
+    targetPort: {{ .Values.tensorboard.port }}
+  - name: jupyter
+    port: {{ .Values.jupyter.port }}
+    targetPort: {{ .Values.jupyter.port }}
   selector:
     app: {{ template "horovod.name" . }}
     release: {{ .Release.Name }}
     role: master
-{{- end }}

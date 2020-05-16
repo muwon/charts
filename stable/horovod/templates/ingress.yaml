@@ -1,7 +1,7 @@
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: {{ template "horovod.fullname" . }}-master-ingress
+  name: {{ .Release.Name }}-master-ingress
   labels:
     app: {{ template "horovod.name" . }}
     chart: {{ template "horovod.chart" . }}
@@ -14,10 +14,17 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   rules:
-  - host: {{ .Values.tensorboard.uiHost }}
+  - host: {{ .Values.tensorboard.host }}
     http:
       paths:
         - backend:
             serviceName: {{ template "horovod.fullname" . }}-master
             servicePort: {{ .Values.tensorboard.port }}
+          path: /
+  - host: {{ .Values.jupyter.host }}
+    http:
+      paths:
+        - backend:
+            serviceName: {{ template "horovod.fullname" . }}-master
+            servicePort: {{ .Values.jupyter.port }}
           path: /
