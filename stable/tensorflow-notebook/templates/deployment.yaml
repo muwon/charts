@@ -33,6 +33,11 @@ spec:
               - key: aliyun.accelerator/nvidia_count
                 operator: In
                 values: [{{ $gpu_count | quote }}]
+              {{- if .Values.jupyter.gpuInstanceType }}
+              - key: beta.kubernetes.io/instance-type
+                operator: In
+                values: [{{ .Values.jupyter.gpuInstanceType | quote }}]
+              {{- end }}
               {{- else }}
               - key: gpu_node
                 operator: In
