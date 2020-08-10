@@ -25,22 +25,17 @@ spec:
 {{ toYaml .Values.extraPodSpec | indent 6 }}
 {{- end }}
       tolerations:
-        {{- if gt $gpu_count 0.0 }}
+        {{- if gt $gpu_count 1.0 }}
         - key: aliyun.accelerator/nvidia_count
           operator: "Equal"
           value: {{ $gpu_count | quote }}
           effect: "NoExecute"
+        {{- end }}
         {{- if .Values.jupyter.gpuInstanceType }}
         - key: beta.kubernetes.io/instance-type
           operator: "Equal"
           value: {{ .Values.jupyter.gpuInstanceType | quote }}
           effect: "NoExecute"
-        {{- end }}
-        {{- else }}
-          - key: gpu_node
-            operator: "Equal"
-            value: "false"
-            effect: "NoExecute"
         {{- end }}
       affinity:
         nodeAffinity:
