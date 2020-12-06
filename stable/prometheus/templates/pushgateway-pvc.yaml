@@ -1,4 +1,4 @@
-{{- if .Values.pushgateway.persistentVolume.enabled -}}
+{{- if and .Values.pushgateway.enabled .Values.pushgateway.persistentVolume.enabled -}}
 {{- if not .Values.pushgateway.persistentVolume.existingClaim -}}
 apiVersion: v1
 kind: PersistentVolumeClaim
